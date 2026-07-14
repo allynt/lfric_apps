@@ -64,7 +64,6 @@ module gungho_driver_mod
                                           stochastic_physics,    &
                                           stochastic_physics_um
   use io_value_mod,                only : io_value_type
-  use integer_io_value_mod,        only : integer_io_value_type
   use time_config_mod,             only : timestep_start
   use timing_mod,                  only : start_timing, stop_timing, &
                                           tik, LPROF
@@ -138,8 +137,7 @@ contains
     type(mesh_type),        pointer :: aerosol_mesh      => null()
     type(mesh_type),        pointer :: aerosol_twod_mesh => null()
 
-    type(io_value_type) :: temp_corr_io_value
-    type(integer_io_value_type) :: random_seed_io_value
+    type(io_value_type),    pointer :: temp_corr_io_value, random_seed_io_value
 
     character(len=*), parameter :: io_context_name = "gungho_atm"
     integer(i_def) :: random_seed_size
@@ -183,7 +181,7 @@ contains
     end if
 
     ! Rate of temperature adjustment for energy correction
-    call temp_corr_io_value%init("temperature_correction_rate", [0.0_r_def])
+    temp_corr_io_value => io_value_type("temperature_correction_rate", [0.0_r_def])
     call modeldb%values%add_key_value( 'temperature_correction_io_value', &
                                        temp_corr_io_value)
     ! Total mass of dry atmosphere used for energy correction
@@ -197,7 +195,7 @@ contains
       call random_seed(size = random_seed_size)
       allocate(integer_array(random_seed_size))
       integer_array = 0
-      call random_seed_io_value%init("random_seed", integer_array)
+      random_seed_io_value => io_value_type("random_seed", integer_array)
       call modeldb%values%add_key_value( 'random_seed_io_value', &
                                          random_seed_io_value )
       deallocate(integer_array)
@@ -206,6 +204,7 @@ contains
         allocate(real_array(stph_spectral_dim))
         real_array = 0.0_r_def
         do i = 1, spt_array_count
+          ! IS THIS VALID CODE ?
           call spt_arrays(i)%init(trim(spt_array_names(i)),real_array)
           call modeldb%values%add_key_value(trim(spt_array_names(i)), &
                                             spt_arrays(i))
@@ -216,6 +215,7 @@ contains
         allocate(real_array(stph_spectral_dim))
         real_array = 0.0_r_def
         do i = 1, skeb_array_count
+          ! IS THIS VALID CODE ?
           call skeb_arrays(i)%init(trim(skeb_array_names(i)),real_array)
           call modeldb%values%add_key_value(trim(skeb_array_names(i)), &
                                             skeb_arrays(i))

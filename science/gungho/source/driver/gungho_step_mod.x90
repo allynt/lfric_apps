@@ -20,6 +20,8 @@ module gungho_step_mod
   use field_collection_mod,           only : field_collection_type
   use field_mod,                      only : field_type
   use io_value_mod,                   only : io_value_type, &
+                                             real32_arr_io_value_type, &
+                                             real64_arr_io_value_type, &
                                              get_io_value
   use formulation_config_mod,         only : use_physics,             &
                                              moisture_formulation,    &
@@ -101,14 +103,12 @@ module gungho_step_mod
     type( field_type), pointer :: dA => null()  ! Areas of faces
     type( field_type), pointer :: accumulated_fluxes => null()
 
-    type( io_value_type ), pointer :: temp_corr_io_value
-
-
     class(timestep_method_type), pointer :: timestep_method => null()
 
     real(r_def), pointer :: total_dry_mass
     real(r_def), pointer :: total_energy
     real(r_def), pointer :: total_energy_previous
+    real(r_def), pointer :: temp_corr_rate
 
     real( r_def )    :: dt
     logical( l_def ) :: use_moisture
@@ -123,7 +123,7 @@ module gungho_step_mod
     call log_event( log_scratch_space, LOG_LEVEL_INFO )
 
     if ( encorr_usage /= encorr_usage_none .or. write_conservation_diag ) then
-      temp_corr_io_value => get_io_value( modeldb%values, 'temperature_correction_io_value')
+      call modeldb%values%get_value( 'temperature_correction_io_value', temp_corr_rate)
       call modeldb%values%get_value( 'total_dry_mass', total_dry_mass )
       call modeldb%values%get_value( 'total_energy', total_energy )
       call modeldb%values%get_value( 'total_energy_previous', &
@@ -164,26 +164,26 @@ module gungho_step_mod
 
     if ( encorr_usage /= encorr_usage_none ) then
       call derived_fields%get_field('accumulated_fluxes', accumulated_fluxes)
-      call sum_fluxes_alg( accumulated_fluxes, &
-                           radiation_fields,   &
-                           turbulence_fields,  &
-                           convection_fields,  &
+      call sum_fluxes_alg( accumulated_fluxes,  &
+                           radiation_fields,    &
+                           turbulence_fields,   &
+                           convection_fields,   &
                            microphysics_fields )
       if ( mod( nint( dt * model_clock%get_step() ), &
                 3600_i_def * reset_hours ) == 0 ) then
 
         call compute_total_mass_alg( total_dry_mass, rho, mesh )
-        call compute_total_energy_alg( total_energy,                      &
-                                       derived_fields, &
-                                       u, theta, exner, rho, mr,          &
+        call compute_total_energy_alg( total_energy,              &
+                                       derived_fields,            &
+                                       u, theta, exner, rho, mr,  &
                                        mesh, twod_mesh )
 
-        call update_energy_correction_alg(                  &
-                               temp_corr_io_value%data(1),  &
-                               accumulated_fluxes,          &
-                               total_dry_mass, dt,          &
-                               mesh, twod_mesh,             &
-                               total_energy,                &
+        call update_energy_correction_alg(              &
+                               temp_corr_rate,          &
+                               accumulated_fluxes,      &
+                               total_dry_mass, dt,      &
+                               mesh, twod_mesh,         &
+                               total_energy,            &
                                total_energy_previous )
 
       end if
