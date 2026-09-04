@@ -66,7 +66,7 @@ module gungho_driver_mod
                                           stochastic_physics,    &
                                           stochastic_physics_um
   use io_value_mod,                only : io_value_type
-  use integer_io_value_mod,        only : integer_io_value_type
+  !!use integer_io_value_mod,        only : integer_io_value_type
   use time_config_mod,             only : timestep_start
   use timing_mod,                  only : start_timing, stop_timing, &
                                           tik, LPROF
@@ -142,8 +142,10 @@ contains
     type(mesh_type),        pointer :: nudging_mesh      => null()
     type(mesh_type),        pointer :: nudging_twod_mesh => null()
 
-    type(io_value_type) :: temp_corr_io_value
-    type(integer_io_value_type) :: random_seed_io_value
+    !!type(io_value_type) :: temp_corr_io_value
+    !!type(integer_io_value_type) :: random_seed_io_value
+    class(io_value_type), pointer :: temp_corr_io_value
+    class(io_value_type), pointer :: random_seed_io_value
 
     character(len=*), parameter :: io_context_name = "gungho_atm"
     integer(i_def) :: random_seed_size
@@ -209,9 +211,12 @@ contains
     end if
 
     ! Rate of temperature adjustment for energy correction
-    call temp_corr_io_value%init("temperature_correction_rate", [0.0_r_def])
-    call modeldb%values%add_key_value( 'temperature_correction_io_value', &
-                                       temp_corr_io_value)
+    !! TODO: THE KEY HAS CHANGED FOR THESE 2 IO_VALUES
+!!    call temp_corr_io_value%init("temperature_correction_rate", [0.0_r_def])
+!!    call modeldb%values%add_key_value( 'temperature_correction_io_value', &
+!!                                       temp_corr_io_value)
+    temp_corr_io_value => io_value_type("temperature_correction_rate", [0.0_r_def])
+    call modeldb%values%add_key_value(temp_corr_io_value)
     ! Total mass of dry atmosphere used for energy correction
     call modeldb%values%add_key_value( 'total_dry_mass', 0.0_r_def )
     ! Total energy of moist atmosphere for calculating energy correction
@@ -223,9 +228,11 @@ contains
       call random_seed(size = random_seed_size)
       allocate(integer_array(random_seed_size))
       integer_array = 0
-      call random_seed_io_value%init("random_seed", integer_array)
-      call modeldb%values%add_key_value( 'random_seed_io_value', &
-                                         random_seed_io_value )
+!!      call random_seed_io_value%init("random_seed", integer_array)
+!!      call modeldb%values%add_key_value( 'random_seed_io_value', &
+!!                                         random_seed_io_value )
+      random_seed_io_value => io_value_type("random_seed", integer_array)
+      call modeldb%values%add_key_value(random_seed_io_value)
       deallocate(integer_array)
 #ifdef UM_PHYSICS
       if (use_spt) then

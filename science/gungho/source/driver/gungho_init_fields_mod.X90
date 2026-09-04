@@ -17,14 +17,20 @@ module gungho_init_fields_mod
   use integer_field_mod,                  only : integer_field_type
   use field_parent_mod,                   only : write_interface
   use field_collection_mod,               only : field_collection_type
-  use io_value_mod,                       only : io_value_type,      &
-                                                 io_write_interface, &
-                                                 io_read_interface,  &
-                                                 get_io_value
-  use integer_io_value_mod,                       only : integer_io_value_type, &
-                                                 integer_io_write_interface,    &
-                                                 integer_io_read_interface,     &
-                                                 get_integer_io_value
+  use io_value_mod,                       only : io_value_type,            &
+                                                 int32_arr_io_value_type,  &
+                                                 int64_arr_io_value_type,  &
+                                                 real32_arr_io_value_type, &
+                                                 real64_arr_io_value_type, &
+                                                 io_write_interface,       &
+!!                                                 io_read_interface,        &
+!!                                                 get_io_value
+                                                 io_read_interface
+!!  use integer_io_value_mod,                       only : integer_io_value_type, &
+!!                                                 integer_io_write_interface,    &
+!!                                                 integer_io_read_interface,     &
+!!                                                 get_integer_io_value
+  use key_value_collection_iterator_mod,  only : get_io_value
   use driver_modeldb_mod,                 only : modeldb_type
   use gungho_time_axes_mod,               only : gungho_time_axes_type, &
                                                  get_time_axes_from_collection
@@ -74,12 +80,14 @@ module gungho_init_fields_mod
                                                  write_dump
   use lfric_xios_read_mod,                only : read_checkpoint,  &
                                                  read_state,       &
-                                                 checkpoint_read_r_def_value, &
-                                                 checkpoint_read_integer_value
-  use lfric_xios_write_mod,               only : write_checkpoint, &
-                                                 checkpoint_time, &
-                                                 checkpoint_write_r_def_value, &
-                                                 checkpoint_write_integer_value, &
+!!                                                 checkpoint_read_r_def_value, &
+!!                                                 checkpoint_read_integer_value
+                                                 checkpoint_read_value
+  use lfric_xios_write_mod,               only : write_checkpoint,      &
+                                                 checkpoint_time,       &
+!!                                                 checkpoint_write_r_def_value, &
+!!                                                 checkpoint_write_integer_value, &
+                                                 checkpoint_write_value, &
                                                  create_checkpoint_list, &
                                                  write_state
   use boundaries_config_mod,              only : limited_area
@@ -624,15 +632,17 @@ subroutine create_model_data( modeldb,           &
     type( field_type ), pointer :: rho   => null()
     type( field_type ), pointer :: u     => null()
     type( field_type ), pointer :: exner => null()
-    type( field_type ), pointer :: accumulated_fluxes    => null()
+    type( field_type ), pointer :: accumulated_fluxes => null()
     type( field_type ), pointer :: ageofair => null()
 
-    type( io_value_type ),               pointer :: temp_corr_io_value
-    type( integer_io_value_type ),       pointer :: random_seed_io_value
+!!    type( io_value_type ),               pointer :: temp_corr_io_value
+!!    type( integer_io_value_type ),       pointer :: random_seed_io_value
+    class( io_value_type ),                  pointer :: temp_corr_io_value
+    class( io_value_type ),                  pointer :: random_seed_io_value
     procedure( io_read_interface ),          pointer :: io_op_read_ptr
     procedure( io_write_interface ),         pointer :: io_op_write_ptr
-    procedure( integer_io_read_interface ),  pointer :: integer_io_op_read_ptr
-    procedure( integer_io_write_interface ), pointer :: integer_io_op_write_ptr
+!!    procedure( integer_io_read_interface ),  pointer :: integer_io_op_read_ptr
+!!    procedure( integer_io_write_interface ), pointer :: integer_io_op_write_ptr
 
     ! Dust fields
 #ifdef UM_PHYSICS
@@ -723,7 +733,9 @@ subroutine create_model_data( modeldb,           &
     temp_corr_io_value => get_io_value( modeldb%values, 'temperature_correction_io_value' )
     nullify(random_seed_io_value)
     if ( stochastic_physics == stochastic_physics_um ) then
-      random_seed_io_value => get_integer_io_value( modeldb%values, 'random_seed_io_value' )
+!!      random_seed_io_value => get_integer_io_value( modeldb%values, 'random_seed_io_value' )
+      random_seed_io_value => get_io_value( modeldb%values, 'random_seed_io_value' )
+
     end if
     call modeldb%values%get_value( 'total_dry_mass', total_dry_mass )
     call modeldb%values%get_value( 'total_energy_previous', &
@@ -762,17 +774,21 @@ subroutine create_model_data( modeldb,           &
 
     ! Ideally, setting IO behaviour should be part of the initialisation
     ! like with the fields but currently there is no support for this so they are placed here
-    io_op_read_ptr => checkpoint_read_r_def_value
-    io_op_write_ptr => checkpoint_write_r_def_value
-    integer_io_op_read_ptr => checkpoint_read_integer_value
-    integer_io_op_write_ptr => checkpoint_write_integer_value
+!!    io_op_read_ptr => checkpoint_read_r_def_value
+!!    io_op_write_ptr => checkpoint_write_r_def_value
+!!    integer_io_op_read_ptr => checkpoint_read_integer_value
+!!    integer_io_op_write_ptr => checkpoint_write_integer_value
+    io_op_read_ptr => checkpoint_read_value
+    io_op_write_ptr => checkpoint_write_value
     if ( encorr_usage /= encorr_usage_none ) then
       call temp_corr_io_value%set_checkpoint_read_behaviour(io_op_read_ptr)
       call temp_corr_io_value%set_checkpoint_write_behaviour(io_op_write_ptr)
     end if
     if ( stochastic_physics == stochastic_physics_um ) then
-      call random_seed_io_value%set_checkpoint_read_behaviour(integer_io_op_read_ptr)
-      call random_seed_io_value%set_checkpoint_write_behaviour(integer_io_op_write_ptr)
+!!      call random_seed_io_value%set_checkpoint_read_behaviour(integer_io_op_read_ptr)
+!!      call random_seed_io_value%set_checkpoint_write_behaviour(integer_io_op_write_ptr)
+      call random_seed_io_value%set_checkpoint_read_behaviour(io_op_read_ptr)
+      call random_seed_io_value%set_checkpoint_write_behaviour(io_op_write_ptr)
 
 #ifdef UM_PHYSICS
       if (use_spt) then
@@ -907,7 +923,6 @@ subroutine create_model_data( modeldb,           &
       end select
 
     end if
-
 
     ! Assuming this is only relevant for physics runs at the moment
     if (use_physics) then
@@ -1094,16 +1109,43 @@ subroutine create_model_data( modeldb,           &
         ! Initialise flux sum to zero
         call invoke( setval_c(accumulated_fluxes, 0.0_r_def) )
 
-        if ( checkpoint_read ) then
-          ! Read the checkpointed temperature correction rate
-          call temp_corr_io_value%read_checkpoint()
-          write( log_scratch_space,                                     &
-                 '("restart_temperature_correction_rate = ", e30.22)' ) &
-            temp_corr_io_value%data(1)
-          call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
-        else
-          temp_corr_io_value%data(1) = 0.0_r_def
-        end if
+!!        if ( checkpoint_read ) then
+!!          ! Read the checkpointed temperature correction rate
+!!          call temp_corr_io_value%read_checkpoint()
+!!          write( log_scratch_space,                                     &
+!!                 '("restart_temperature_correction_rate = ", e30.22)' ) &
+!!            temp_corr_io_value%data(1)
+!!          call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
+!!        else
+!!          temp_corr_io_value%data(1) = 0.0_r_def
+!!        end if
+        select type(concrete_temp_corr_io_value => temp_corr_io_value)
+          type is (real32_arr_io_value_type)
+            if ( checkpoint_read ) then
+              ! Read the checkpointed temperature correction rate
+              call concrete_temp_corr_io_value%read_checkpoint()
+              write( log_scratch_space,                                     &
+                     '("restart_temperature_correction_rate = ", e30.22)' ) &
+                     concrete_temp_corr_io_value%value(1)
+              call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
+            else
+              concrete_temp_corr_io_value%value(1) = 0.0_r_def
+            end if
+          type is (real64_arr_io_value_type)
+            if ( checkpoint_read ) then
+              ! Read the checkpointed temperature correction rate
+              call concrete_temp_corr_io_value%read_checkpoint()
+              write( log_scratch_space,                                     &
+                     '("restart_temperature_correction_rate = ", e30.22)' ) &
+                     concrete_temp_corr_io_value%value(1)
+              call log_event(log_scratch_space, LOG_LEVEL_DEBUG)
+            else
+              concrete_temp_corr_io_value%value(1) = 0.0_r_def
+            end if
+          class default
+            call log_event("temp_corr_io_value must have real value", &
+                           LOG_LEVEL_ERROR)
+        end select
 
       end if
 
@@ -1133,7 +1175,8 @@ subroutine create_model_data( modeldb,           &
         if ( checkpoint_read ) then
           ! Read the checkpointed random seed
           call random_seed_io_value%read_checkpoint()
-          ranseed = random_seed_io_value%data
+!!          ranseed = random_seed_io_value%data
+          call random_seed_io_value%get_value(ranseed)
 
 #ifdef UM_PHYSICS
           ! Read arrays for SPT and SKEB schemes
@@ -1225,7 +1268,8 @@ subroutine create_model_data( modeldb,           &
     type( field_collection_type ), pointer :: fd_fields
     type( field_collection_type ), pointer :: prognostic_fields
 
-    type( integer_io_value_type ), pointer :: random_seed_io_value
+!!    type( integer_io_value_type ), pointer :: random_seed_io_value
+    class( io_value_type ), pointer :: random_seed_io_value
     integer(i_def) :: random_seed_size
     integer(i_def), allocatable :: ranseed(:)
     real(r_second), allocatable :: all_checkpoint_times(:)
@@ -1258,8 +1302,17 @@ subroutine create_model_data( modeldb,           &
         allocate(ranseed(random_seed_size))
         call random_seed(get = ranseed(1:random_seed_size))
 
-        random_seed_io_value => get_integer_io_value(modeldb%values, 'random_seed_io_value')
-        random_seed_io_value%data = ranseed
+!!        random_seed_io_value => get_integer_io_value(modeldb%values, 'random_seed_io_value')
+!!        random_seed_io_value%data = ranseed
+        random_seed_io_value => get_io_value(modeldb%values, 'random_seed_io_value')
+        select type(concrete_random_seed_io_value => random_seed_io_value)
+          type is (int32_arr_io_value_type)
+            concrete_random_seed_io_value%value = ranseed
+          type is (int64_arr_io_value_type)
+            concrete_random_seed_io_value%value = ranseed
+          class default
+            call log_event("random_seed_io_value must have int32 or int64 value", log_level_error)
+        end select
         deallocate(ranseed)
       end if
       call split_complex_prognostics( prognostic_fields )
